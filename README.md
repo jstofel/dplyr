@@ -65,7 +65,8 @@ You can create them as follows:
 ``` r
 library(dplyr) # for functions
 library(nycflights13) # for data
-flights
+data(flights)  #load the fights data into a data frame in the global environment
+flights        #show sample data and metadata from the dataset
 #> Source: local data frame [336,776 x 16]
 #> 
 #>     year month   day dep_time dep_delay arr_time arr_delay carrier tailnum
@@ -85,9 +86,11 @@ flights
 #>   (dbl), distance (dbl), hour (dbl), minute (dbl)
 
 # Caches data in local SQLite db
+# A sqlite database is created if it does not exist
 flights_db1 <- tbl(nycflights13_sqlite(), "flights")
 
-# Caches data in local postgres db
+# Caches data in local postgres db, if one exists.  See the documentation under ?nycflights13_postgres()
+# This nycflights13_postgred function requires a pre-existing PostgreSql database, a connection, and the RPostgreSql package 
 flights_db2 <- tbl(nycflights13_postgres(), "flights")
 ```
 
@@ -110,28 +113,37 @@ Single table verbs
 -   `summarise()`: reduces a group(s) to a smaller number of values (e.g., summary statistics)
 -   `arrange()`: re-orders observations
 
-They work across the range of data sources. The main difference is their performance:
+They work across the range of data sources. The main difference is their performance.
+
+Data frame (dplyr) methods are faster than their plyr equivalents. 
 
 ``` r
+# dplyr summarise
 system.time(carriers_df %>% summarise(delay = mean(arr_delay)))
 #>    user  system elapsed 
 #>   0.036   0.001   0.037
-system.time(carriers_db1 %>% summarise(delay = mean(arr_delay)) %>% collect())
-#>    user  system elapsed 
-#>   0.263   0.130   0.392
-system.time(carriers_db2 %>% summarise(delay = mean(arr_delay)) %>% collect())
-#>    user  system elapsed 
-#>   0.016   0.001   0.151
-```
 
-Data frame methods are much much faster than their plyr equivalents. The database methods are slower, but can work with data that don't fit in memory.
-
-``` r
+# plyr summarise 
 system.time(plyr::ddply(flights, "carrier", plyr::summarise,
   delay = mean(arr_delay, na.rm = TRUE)))
 #>    user  system elapsed 
 #>   0.100   0.032   0.133
 ```
+The database methods are slower, but can work with data that don't fit in memory.
+
+```r
+# sqlite + dplyr
+system.time(carriers_db1 %>% summarise(delay = mean(arr_delay)) %>% collect())
+#>    user  system elapsed 
+#>   0.263   0.130   0.392
+
+# postgres + dplyr
+system.time(carriers_db2 %>% summarise(delay = mean(arr_delay)) %>% collect())
+#>    user  system elapsed 
+#>   0.016   0.001   0.151
+```
+
+
 
 ### `do()`
 
